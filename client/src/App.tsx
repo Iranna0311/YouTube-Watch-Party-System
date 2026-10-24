@@ -45,7 +45,7 @@ import { ParticipantList } from './components/ParticipantList';
 import { ChatPanel } from './components/ChatPanel';
 import { ChangeRequestBanner } from './components/ChangeRequestBanner';
 import { ChangeRequestModal } from './components/ChangeRequestModal';
-import { EmojiReactions } from './components/EmojiReactions';
+import { FloatingReactions } from './components/FloatingReactions';
 import { PlaylistQueue } from './components/PlaylistQueue';
 import { AuditLogModal } from './components/AuditLogModal';
 
@@ -254,7 +254,7 @@ export const App: React.FC = () => {
       setActiveReactions((prev) => [...prev, reaction]);
       setTimeout(() => {
         setActiveReactions((prev) => prev.filter((r) => r.id !== reaction.id));
-      }, 3000);
+      }, 3500);
     });
 
     socket.on('error', (err: { message: string }) => {
@@ -397,18 +397,22 @@ export const App: React.FC = () => {
   };
 
   const handleSendReaction = (emoji: string) => {
-    socket.emit('reaction', { emoji });
+    const reactionId = 'react_local_' + Math.random().toString(36).substring(2, 9);
     const localReaction: EmojiReaction = {
-      id: 'react_local_' + Math.random().toString(36).substring(2, 9),
+      id: reactionId,
       emoji,
       userId,
       username: username || 'You',
       timestamp: Date.now(),
     };
+    // Pop up on screen for sender immediately
     setActiveReactions((prev) => [...prev, localReaction]);
     setTimeout(() => {
-      setActiveReactions((prev) => prev.filter((r) => r.id !== localReaction.id));
-    }, 3000);
+      setActiveReactions((prev) => prev.filter((r) => r.id !== reactionId));
+    }, 3500);
+
+    // Broadcast to everyone else in room
+    socket.emit('reaction', { emoji });
   };
 
   const handleLeaveRoom = () => {
@@ -596,30 +600,32 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* Cinema Ambient Action Bar (Responsive Mobile & Desktop) */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 cinema-panel rounded-2xl p-2.5 sm:p-3 px-3 sm:px-4 shadow-md border border-white/5">
-            <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
-              <EmojiReactions
-                onSendReaction={handleSendReaction}
-                activeReactions={activeReactions}
-              />
+          {/* Floating Reactions Popup Layer (Renders over entire screen) */}
+          <FloatingReactions activeReactions={activeReactions} />
 
-              {!canManagePlayback && (
+          {/* Cinema Ambient Action Bar (No duplicate emojis below) */}
+          <div className="flex items-center justify-between gap-3 cinema-panel rounded-2xl p-2.5 px-4 shadow-md border border-white/5">
+            <div className="flex items-center gap-2">
+              {!canManagePlayback ? (
                 <button
                   onClick={() => setIsRequestModalOpen(true)}
-                  className="px-2.5 sm:px-3 py-1.5 bg-red-600/15 hover:bg-red-600/25 text-red-300 rounded-xl border border-red-500/30 text-[11px] sm:text-xs font-semibold transition flex items-center gap-1.5 shrink-0"
+                  className="px-3 py-1.5 bg-red-600/15 hover:bg-red-600/25 text-red-300 rounded-xl border border-red-500/30 text-xs font-semibold transition flex items-center gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5 text-red-400" />
-                  <span className="hidden sm:inline">Request Song / Control</span>
-                  <span className="sm:hidden">Request</span>
+                  <span>Request Song / Control</span>
                 </button>
+              ) : (
+                <span className="text-xs text-cinema-gold font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>VIP Host Controls Active</span>
+                </span>
               )}
             </div>
 
-            {/* Synced Indicator */}
-            <div className="flex items-center justify-end gap-1.5 sm:gap-2 text-[11px] font-medium text-gray-400">
+            {/* Dolby Frame Sync Indicator */}
+            <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-              <span className="text-gray-300">DOLBY SYNCED</span>
+              <span className="text-gray-300">DOLBY FRAME SYNC</span>
             </div>
           </div>
         </div>
