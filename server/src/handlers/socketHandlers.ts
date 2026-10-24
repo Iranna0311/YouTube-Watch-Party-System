@@ -20,6 +20,7 @@ import {
   SeekPayloadSchema,
   VideoEndedSchema,
 } from '../validators/schemas';
+import { dbPersistRoom, dbUpdateRoomVideo, dbPersistChatMessage, dbPersistAuditLog } from '../services/supabase';
 
 interface SocketData {
   userId?: string;
@@ -94,7 +95,9 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
         participants: room.getParticipantsList(),
       });
 
-      room.logAudit('room_created', host.username, `Room created with video ${initialVideoId ?? 'M7lc1UVf-VE'}`);
+      const audit = room.logAudit('room_created', host.username, `Room created with video ${initialVideoId ?? 'M7lc1UVf-VE'}`);
+      dbPersistRoom(room.code, host.userId, initialVideoId ?? 'M7lc1UVf-VE');
+      dbPersistAuditLog(room.code, audit);
     });
 
     // --- 2. JOIN ROOM ---
@@ -258,6 +261,8 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
       const audit = room.logAudit('change_video', participant.username, `Changed video to ${parsed.data.videoId}`);
       room.broadcastToStaff('audit_log_entry', audit);
+      dbUpdateRoomVideo(room.code, parsed.data.videoId);
+      dbPersistAuditLog(room.code, audit);
     });
 
     // --- 7. VIDEO ENDED (queue auto-advance) ---
@@ -280,6 +285,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
         const audit = room.logAudit('queue_advance', participant.username, `Auto-advanced to ${nextVideo.videoId}`);
         room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
       }
     });
 
@@ -314,6 +320,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
       const audit = room.logAudit('queue_add', participant.username, `Added ${parsed.data.videoId} to queue`);
       room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
     });
 
     socket.on('advance_queue', () => {
@@ -335,6 +342,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
         const audit = room.logAudit('queue_advance', participant.username, `Skipped to ${nextVideo.videoId}`);
         room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
       }
     });
 
@@ -373,6 +381,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
         const audit = room.logAudit('role_assigned', participant.username, `Set ${target.username} → ${parsed.data.role}`);
         room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
       } else {
         socket.emit('error', { message: 'Role assignment rejected' });
       }
@@ -420,6 +429,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
         const audit = room.logAudit('user_kicked', participant.username, `Removed and banned ${target.username}`);
         room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
       }
     });
 
@@ -450,6 +460,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
         const audit = room.logAudit('host_transfer', participant.username, `Transferred ownership to ${newHost?.username}`);
         room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
       }
     });
 
@@ -534,6 +545,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
 
       const audit = room.logAudit('request_approved', participant.username, `Approved ${request.username}'s ${request.type}`);
       room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
     });
 
     socket.on('reject_request', (rawPayload: unknown) => {
@@ -578,6 +590,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
       };
 
       room.broadcast('chat_message', message);
+      dbPersistChatMessage(room.code, message);
     });
 
     // --- 14. EMOJI REACTIONS ---
@@ -625,6 +638,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
           });
           const audit = room.logAudit('auto_promoted', 'System', `${newHost.username} auto-promoted to Host`);
           room.broadcastToStaff('audit_log_entry', audit);
+      dbPersistAuditLog(room.code, audit);
         }, 10000);
       } else {
         room.removeParticipant(participant.userId);
