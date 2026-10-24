@@ -21,6 +21,7 @@ import {
   VideoEndedSchema,
 } from '../validators/schemas';
 import { dbPersistRoom, dbUpdateRoomVideo, dbPersistChatMessage, dbPersistAuditLog } from '../services/supabase';
+import { logUserJoin, logChatMessage, logUserLeave } from '../services/liveLogger';
 
 interface SocketData {
   userId?: string;
@@ -98,6 +99,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
       const audit = room.logAudit('room_created', host.username, `Room created with video ${initialVideoId ?? 'M7lc1UVf-VE'}`);
       dbPersistRoom(room.code, host.userId, initialVideoId ?? 'M7lc1UVf-VE');
       dbPersistAuditLog(room.code, audit);
+      logUserJoin(room.code, host.userId, host.username, host.role);
     });
 
     // --- 2. JOIN ROOM ---
@@ -153,6 +155,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
           role: existing.role,
           participants: room.getParticipantsList(),
         });
+        logUserJoin(room.code, existing.userId, existing.username, existing.role);
         return;
       }
 
@@ -176,6 +179,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
         role: newParticipant.role,
         participants: room.getParticipantsList(),
       });
+      logUserJoin(room.code, newParticipant.userId, newParticipant.username, newParticipant.role);
     });
 
     // --- 3. PLAY ---
@@ -590,7 +594,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
       };
 
       room.broadcast('chat_message', message);
-      dbPersistChatMessage(room.code, message);
+      logChatMessage(room.code, message);
     });
 
     // --- 14. EMOJI REACTIONS ---
@@ -649,6 +653,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
         username: participant.username,
         participants: room.getParticipantsList(),
       });
+      logUserLeave(room.code, participant.userId, participant.username, participant.role);
 
       // Cleanup empty room: clears timers, maps, and interval
       roomManager.cleanupRoomIfEmpty(room.code);

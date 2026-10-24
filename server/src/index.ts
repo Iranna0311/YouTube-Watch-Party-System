@@ -7,6 +7,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { RoomManager } from './models/RoomManager';
 import { registerSocketHandlers } from './handlers/socketHandlers';
+import { getChatCsvPath, getActivityCsvPath } from './services/liveLogger';
 
 dotenv.config();
 
@@ -81,6 +82,27 @@ app.get('/api/room/:code', (req, res) => {
     hostId: room.hostId,
     participantsCount: room.getParticipantsList().length,
   });
+});
+
+// CSV Export endpoints for live database & activity tracking
+app.get('/api/export/chat.csv', (_req, res) => {
+  const filePath = getChatCsvPath();
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="chat_history.csv"');
+    return res.sendFile(filePath);
+  }
+  return res.status(404).send('No chat data recorded yet.');
+});
+
+app.get('/api/export/activity.csv', (_req, res) => {
+  const filePath = getActivityCsvPath();
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="activity_logs.csv"');
+    return res.sendFile(filePath);
+  }
+  return res.status(404).send('No activity data recorded yet.');
 });
 
 // Serve frontend build if dist folder exists (Full-stack Render deployment support)
