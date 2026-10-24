@@ -51,6 +51,7 @@ import { AuditLogModal } from './components/AuditLogModal';
 
 export const App: React.FC = () => {
   const userId = useRef(getOrCreateUserId()).current;
+  const clientId = useRef('client_' + Math.random().toString(36).substring(2, 9)).current;
 
   // Session & Room State
   const [inRoom, setInRoom] = useState(false);
@@ -305,9 +306,12 @@ export const App: React.FC = () => {
       });
     });
 
-    socket.on('reaction', (reaction: EmojiReaction) => {
-      if (reaction.userId === userId) return;
-      setActiveReactions((prev) => [...prev, reaction]);
+    socket.on('reaction', (reaction: EmojiReaction & { clientId?: string }) => {
+      if (reaction.clientId && reaction.clientId === clientId) return;
+      setActiveReactions((prev) => {
+        if (prev.some((r) => r.id === reaction.id)) return prev;
+        return [...prev, reaction];
+      });
       setTimeout(() => {
         setActiveReactions((prev) => prev.filter((r) => r.id !== reaction.id));
       }, 3500);
@@ -477,8 +481,8 @@ export const App: React.FC = () => {
       setActiveReactions((prev) => prev.filter((r) => r.id !== reactionId));
     }, 3500);
 
-    // Broadcast to everyone else in room
-    socket.emit('reaction', { emoji });
+    // Broadcast to everyone else in room with clientId
+    socket.emit('reaction', { emoji, clientId });
   };
 
   const handleLeaveRoom = () => {

@@ -244,7 +244,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       const clientTime = player.getCurrentTime();
       const drift = Math.abs(clientTime - authoritativeTime);
 
-      if (drift > 1.2) {
+      if (drift > 0.5) {
         player.seekTo(authoritativeTime, true);
         setCurrentTime(authoritativeTime);
         lastReportedTimeRef.current = authoritativeTime;
@@ -276,6 +276,10 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       } else {
         try {
           player.pauseVideo();
+          if (drift > 0.3) {
+            player.seekTo(authoritativeTime, true);
+            setCurrentTime(authoritativeTime);
+          }
           setIsPlaying(false);
           setNeedsUserGesture(false);
         } catch {}

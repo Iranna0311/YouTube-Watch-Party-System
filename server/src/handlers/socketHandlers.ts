@@ -619,12 +619,14 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
       const parsed = ReactionSchema.safeParse(rawPayload);
       if (!parsed.success) return;
 
-      const reaction: EmojiReaction = {
+      const clientId = (rawPayload as any)?.clientId;
+      const reaction: EmojiReaction & { clientId?: string } = {
         id: 'react_' + Math.random().toString(36).substring(2, 9),
         emoji: parsed.data.emoji,
         userId: participant.userId,
         username: participant.username,
         timestamp: Date.now(),
+        clientId,
       };
 
       room.broadcast('reaction', reaction);
