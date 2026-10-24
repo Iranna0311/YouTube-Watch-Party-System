@@ -4,7 +4,7 @@
   "description": "Real-time YouTube Watch Party System",
   "scripts": {
     "install:all": "npm install --include=dev --prefix server && npm install --include=dev --prefix client",
-    "build": "npm run build --prefix client && npm run build --prefix server",
+    "build": "npm run install:all && npm run build --prefix client && npm run build --prefix server",
     "start": "node server/dist/index.js",
     "test": "npm test --prefix server",
     "test:load": "npm run --prefix server test:load"
