@@ -592,6 +592,7 @@ export const App: React.FC = () => {
               onVideoEnded={handleVideoEnded}
               syncState={syncState}
               onRequestControlModal={() => setIsRequestModalOpen(true)}
+              onSendReaction={handleSendReaction}
             />
           </div>
 

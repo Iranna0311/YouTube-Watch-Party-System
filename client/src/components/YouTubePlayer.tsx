@@ -1,5 +1,19 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, AlertCircle } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  AlertCircle,
+  Settings,
+  Tv,
+  Radio,
+  RotateCcw,
+  FastForward,
+  Rewind,
+  Check,
+} from 'lucide-react';
 import { Role, SyncStatePayload } from '../types';
 import { formatTime } from '../utils/youtube';
 import { socket } from '../services/socket';
@@ -20,7 +34,19 @@ interface YouTubePlayerProps {
   onVideoEnded?: () => void;
   syncState: SyncStatePayload | null;
   onRequestControlModal?: () => void;
+  onSendReaction?: (emoji: string) => void;
 }
+
+const QUALITY_OPTIONS = [
+  { label: 'Auto (Recommended)', value: 'auto' },
+  { label: '1080p HD', value: 'hd1080' },
+  { label: '720p HD', value: 'hd720' },
+  { label: '480p', value: 'large' },
+  { label: '360p', value: 'medium' },
+  { label: '240p', value: 'small' },
+];
+
+const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2];
 
 export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   videoId,
@@ -31,6 +57,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   onVideoEnded,
   syncState,
   onRequestControlModal,
+  onSendReaction,
 }) => {
   const playerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,14 +70,17 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [needsUserGesture, setNeedsUserGesture] = useState(false);
 
+  // Settings Menu state (Quality & Speed)
+  const [showSettings, setShowSettings] = useState(false);
+  const [currentQuality, setCurrentQuality] = useState('auto');
+  const [currentSpeed, setCurrentSpeed] = useState(1);
+
   // Flags & Timers to prevent event loop ping-pong
   const isRemoteUpdateRef = useRef(false);
   const remoteTimerRef = useRef<any>(null);
   const lastReportedTimeRef = useRef(0);
   const seekPollIntervalRef = useRef<any>(null);
-
-  // NTP Clock Offset measurement (Bug A fix)
-  const clockOffsetRef = useRef(0);
+  const clockOffsetRef = useRef<number>(0);
 
   const canControl = userRole === 'Host' || userRole === 'Moderator';
 
@@ -77,13 +107,16 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       if (!window.YT || !window.YT.Player) return;
 
       if (playerRef.current) {
-        playerRef.current.destroy();
+        try {
+          playerRef.current.destroy();
+        } catch {}
       }
 
+      const target = document.getElementById('yt-player-target');
+      if (!target) return;
+
       playerRef.current = new window.YT.Player('yt-player-target', {
-        height: '100%',
-        width: '100%',
-        videoId: videoId,
+        videoId,
         playerVars: {
           autoplay: 0,
           controls: 0,
@@ -98,6 +131,13 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           onReady: (event: any) => {
             setIsReady(true);
             setDuration(event.target.getDuration() || 0);
+
+            // Suppress spurious state change emissions on mount/join
+            isRemoteUpdateRef.current = true;
+            if (remoteTimerRef.current) clearTimeout(remoteTimerRef.current);
+            remoteTimerRef.current = setTimeout(() => {
+              isRemoteUpdateRef.current = false;
+            }, 3000);
 
             if (syncState) {
               applySyncState(syncState, event.target);
@@ -114,17 +154,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
               return;
             }
 
-            // Suppress event if triggered by remote update
-            if (isRemoteUpdateRef.current) {
-              if (playerState === window.YT.PlayerState.PLAYING) {
-                setIsPlaying(true);
-              } else if (playerState === window.YT.PlayerState.PAUSED) {
-                setIsPlaying(false);
-              }
-              return;
-            }
-
-            // Sync local UI state with player (do NOT emit play/pause to server on passive state changes)
+            // Sync UI play state with player without firing server pause emissions
             if (playerState === window.YT.PlayerState.PLAYING) {
               setIsPlaying(true);
             } else if (playerState === window.YT.PlayerState.PAUSED) {
@@ -156,14 +186,12 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
-        } catch (e) {
-          // ignore
-        }
+        } catch {}
       }
     };
   }, [videoId]);
 
-  // 2. Poll player current time and detect scrubber seeks & jumps
+  // 2. Poll player current time and detect scrubber seeks
   useEffect(() => {
     if (!isReady) return;
 
@@ -174,37 +202,26 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       setCurrentTime(playerTime);
       setDuration(playerRef.current.getDuration() || 0);
 
-      if (canControl && !isRemoteUpdateRef.current) {
-        const expectedDiff = Math.abs(playerTime - (lastReportedTimeRef.current + 0.5));
-        if (expectedDiff > 1.5 && Math.abs(playerTime - lastReportedTimeRef.current) > 1.5) {
-          onEmitSeek(playerTime);
-        }
-      }
-
       lastReportedTimeRef.current = playerTime;
     }, 500);
 
     return () => {
       if (seekPollIntervalRef.current) clearInterval(seekPollIntervalRef.current);
     };
-  }, [isReady, canControl, onEmitSeek]);
+  }, [isReady]);
 
-  /**
-   * 3. Apply Server Sync State (Bug A & Bug B fixes)
-   */
+  // 3. Apply Server Sync State with drift correction
   const applySyncState = useCallback(
     (sync: SyncStatePayload, targetPlayer?: any) => {
       const player = targetPlayer || playerRef.current;
       if (!player || typeof player.getCurrentTime !== 'function') return;
 
-      // Bug B fix: Reset isRemoteUpdateRef after timeout so it never gets stuck
       isRemoteUpdateRef.current = true;
       if (remoteTimerRef.current) clearTimeout(remoteTimerRef.current);
       remoteTimerRef.current = setTimeout(() => {
         isRemoteUpdateRef.current = false;
-      }, 500);
+      }, 2000);
 
-      // Bug A fix: Correctly advance authoritativeTime as of sync.serverTime without double-counting
       let authoritativeTime = sync.currentTime;
       if (sync.playState === 'playing') {
         const serverNow = Date.now() + clockOffsetRef.current;
@@ -214,8 +231,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       const clientTime = player.getCurrentTime();
       const drift = Math.abs(clientTime - authoritativeTime);
 
-      // DRIFT CORRECTION: Only seek if drift exceeds threshold (1.0s)
-      if (drift > 1.0) {
+      if (drift > 1.2) {
         player.seekTo(authoritativeTime, true);
         setCurrentTime(authoritativeTime);
         lastReportedTimeRef.current = authoritativeTime;
@@ -227,6 +243,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         if (playPromise && typeof playPromise.catch === 'function') {
           playPromise.catch(() => {
             setNeedsUserGesture(true);
+            isRemoteUpdateRef.current = true;
           });
         }
       } else {
@@ -254,12 +271,10 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const time = playerRef.current.getCurrentTime();
 
     if (isPlaying) {
-      isRemoteUpdateRef.current = true;
       playerRef.current.pauseVideo();
       setIsPlaying(false);
       onEmitPause(time);
     } else {
-      isRemoteUpdateRef.current = true;
       playerRef.current.playVideo();
       setIsPlaying(true);
       onEmitPlay(time);
@@ -280,6 +295,38 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     playerRef.current.seekTo(targetTime, true);
     lastReportedTimeRef.current = targetTime;
     onEmitSeek(targetTime);
+  };
+
+  const handleSeekDelta = (deltaSeconds: number) => {
+    if (!canControl) {
+      if (onRequestControlModal) onRequestControlModal();
+      return;
+    }
+
+    const targetTime = Math.max(0, Math.min(duration, currentTime + deltaSeconds));
+    setCurrentTime(targetTime);
+
+    if (!playerRef.current) return;
+    isRemoteUpdateRef.current = true;
+    playerRef.current.seekTo(targetTime, true);
+    lastReportedTimeRef.current = targetTime;
+    onEmitSeek(targetTime);
+  };
+
+  const handleQualityChange = (qValue: string) => {
+    setCurrentQuality(qValue);
+    if (playerRef.current && typeof playerRef.current.setPlaybackQuality === 'function') {
+      playerRef.current.setPlaybackQuality(qValue);
+    }
+    setShowSettings(false);
+  };
+
+  const handleSpeedChange = (speed: number) => {
+    setCurrentSpeed(speed);
+    if (playerRef.current && typeof playerRef.current.setPlaybackRate === 'function') {
+      playerRef.current.setPlaybackRate(speed);
+    }
+    setShowSettings(false);
   };
 
   const handleToggleMute = () => {
@@ -327,36 +374,40 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl flex flex-col group select-none"
+      className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl flex flex-col group select-none border border-white/10"
     >
-      <div className="absolute inset-0 w-full h-full pointer-events-none">
-        <div id="yt-player-target" className="w-full h-full" />
+      {/* 16:9 Video Canvas Frame */}
+      <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+        <div className="absolute inset-0 w-full h-full pointer-events-none">
+          <div id="yt-player-target" className="w-full h-full" />
+        </div>
+
+        {/* Mobile Autoplay Unblock Overlay */}
+        {needsUserGesture && (
+          <div className="absolute inset-0 z-30 bg-black/85 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+            <AlertCircle className="w-12 h-12 text-yellow-400 mb-3 animate-bounce" />
+            <h3 className="text-xl font-bold text-white mb-2">Autoplay Audio Blocked</h3>
+            <p className="text-gray-300 text-sm max-w-md mb-4">
+              Tap below to sync audio and video with the theater.
+            </p>
+            <button
+              onClick={handleUserGestureUnblock}
+              className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg transition"
+            >
+              Tap to Sync & Watch
+            </button>
+          </div>
+        )}
       </div>
 
-      {needsUserGesture && (
-        <div className="absolute inset-0 z-30 bg-black/85 flex flex-col items-center justify-center p-6 text-center">
-          <AlertCircle className="w-12 h-12 text-yellow-400 mb-3 animate-bounce" />
-          <h3 className="text-xl font-bold text-white mb-2">Autoplay Audio Blocked</h3>
-          <p className="text-gray-300 text-sm max-w-md mb-4">
-            Click below to unblock browser audio playback.
-          </p>
-          <button
-            onClick={handleUserGestureUnblock}
-            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-lg transition"
-          >
-            Click to Start & Unmute Audio
-          </button>
-        </div>
-      )}
+      {/* Modern Cinema Player Controls Section */}
+      <div className="bg-cinema-900/95 border-t border-white/10 p-3 sm:p-4 flex flex-col gap-2.5">
+        {/* Scrubber Progress Bar with Time Display (0:33 ------- 2:15) */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono text-gray-300 min-w-[36px] text-right">
+            {formatTime(currentTime)}
+          </span>
 
-      <div
-        onClick={handleTogglePlay}
-        className="absolute inset-0 z-10 cursor-pointer"
-        title={canControl ? 'Click to Play/Pause' : 'Participant: View only (Click to request)'}
-      />
-
-      <div className="absolute bottom-0 inset-x-0 z-20 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <div className="flex items-center gap-2 mb-2">
           <input
             type="range"
             min={0}
@@ -364,29 +415,64 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             value={currentTime}
             onChange={handleSeek}
             disabled={!canControl}
-            className={`w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-600 focus:outline-none ${
-              !canControl ? 'opacity-60 cursor-not-allowed' : ''
+            className={`w-full h-1.5 bg-white/20 hover:bg-white/30 rounded-lg appearance-none cursor-pointer accent-red-600 transition-all focus:outline-none ${
+              !canControl ? 'opacity-70 cursor-not-allowed' : ''
             }`}
           />
+
+          <span className="text-xs font-mono text-gray-400 min-w-[36px]">
+            {formatTime(duration)}
+          </span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        {/* Controls Action Bar: Play, -10s, +10s, Live, Volume, Settings, Suggest Video, Fullscreen */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          {/* Left Controls Cluster */}
+          <div className="flex items-center gap-2">
+            {/* Play/Pause Button */}
             <button
               onClick={handleTogglePlay}
-              className={`p-2 text-white hover:text-red-500 transition rounded-full hover:bg-white/10 ${
-                !canControl ? 'opacity-50 hover:opacity-80' : ''
+              className={`p-2 text-white hover:text-red-500 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition ${
+                !canControl ? 'opacity-70 cursor-not-allowed' : ''
               }`}
+              title={canControl ? (isPlaying ? 'Pause' : 'Play') : 'Host control only'}
             >
-              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
+              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
             </button>
 
-            <div className="flex items-center gap-2">
+            {/* Skip Backward -10s */}
+            <button
+              onClick={() => handleSeekDelta(-10)}
+              className="px-2.5 sm:px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl border border-white/10 text-xs font-semibold transition flex items-center gap-1"
+              title="Rewind 10 seconds"
+            >
+              <Rewind className="w-3.5 h-3.5" />
+              <span>-10s</span>
+            </button>
+
+            {/* Skip Forward +10s */}
+            <button
+              onClick={() => handleSeekDelta(10)}
+              className="px-2.5 sm:px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl border border-white/10 text-xs font-semibold transition flex items-center gap-1"
+              title="Fast forward 10 seconds"
+            >
+              <FastForward className="w-3.5 h-3.5" />
+              <span>+10s</span>
+            </button>
+
+            {/* ((o)) Live Indicator Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-xs font-bold tracking-wide select-none shadow-sm">
+              <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span>Live</span>
+            </div>
+
+            {/* Volume Control */}
+            <div className="hidden sm:flex items-center gap-2 ml-1">
               <button
                 onClick={handleToggleMute}
                 className="p-1.5 text-gray-300 hover:text-white transition"
               >
-                {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
               <input
                 type="range"
@@ -397,27 +483,109 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 className="w-16 h-1 bg-gray-600 rounded appearance-none cursor-pointer accent-white"
               />
             </div>
-
-            <div className="text-xs font-mono text-gray-300">
-              <span>{formatTime(currentTime)}</span> / <span>{formatTime(duration)}</span>
-            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {!canControl && (
-              <span className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-0.5 rounded">
-                Watch Only
-              </span>
-            )}
+          {/* Right Controls Cluster: Settings, Suggest Video, Fullscreen */}
+          <div className="flex items-center gap-2 relative">
+            {/* Settings Gear (Video Quality & Playback Speed Menu) */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className={`p-2 rounded-xl transition border ${
+                  showSettings
+                    ? 'bg-red-600 text-white border-red-500'
+                    : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border-white/10'
+                }`}
+                title="Settings (Video Quality & Speed)"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
 
+              {/* Quality & Speed Dropdown Popover */}
+              {showSettings && (
+                <div className="absolute right-0 bottom-full mb-3 z-50 bg-cinema-900/98 backdrop-blur-2xl border border-white/15 rounded-2xl p-3 shadow-2xl w-60 animate-in fade-in zoom-in-95 text-xs text-white">
+                  <div className="font-bold text-gray-400 uppercase tracking-wider text-[10px] pb-1.5 mb-2 border-b border-white/10">
+                    Playback Settings
+                  </div>
+
+                  {/* Quality Section */}
+                  <div className="mb-3">
+                    <span className="font-semibold text-gray-300 block mb-1.5">Video Quality:</span>
+                    <div className="grid grid-cols-2 gap-1">
+                      {QUALITY_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleQualityChange(opt.value)}
+                          className={`px-2 py-1.5 rounded-lg text-left text-xs transition flex items-center justify-between ${
+                            currentQuality === opt.value
+                              ? 'bg-red-600 text-white font-bold'
+                              : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                          }`}
+                        >
+                          <span className="truncate">{opt.label}</span>
+                          {currentQuality === opt.value && <Check className="w-3 h-3 ml-1 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Speed Section */}
+                  <div>
+                    <span className="font-semibold text-gray-300 block mb-1.5">Playback Speed:</span>
+                    <div className="flex items-center gap-1">
+                      {SPEED_OPTIONS.map((spd) => (
+                        <button
+                          key={spd}
+                          onClick={() => handleSpeedChange(spd)}
+                          className={`flex-1 py-1 rounded-lg text-center text-xs transition ${
+                            currentSpeed === spd
+                              ? 'bg-red-600 text-white font-bold'
+                              : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                          }`}
+                        >
+                          {spd}x
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Suggest Video Button */}
+            <button
+              onClick={onRequestControlModal}
+              className="px-3.5 py-1.5 bg-white/10 hover:bg-white/15 text-white rounded-xl border border-white/10 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+              title="Suggest or change video"
+            >
+              <Tv className="w-4 h-4 text-red-400" />
+              <span>Suggest Video</span>
+            </button>
+
+            {/* Fullscreen Button */}
             <button
               onClick={handleFullscreen}
-              className="p-1.5 text-gray-300 hover:text-white transition rounded hover:bg-white/10"
-              title="Fullscreen"
+              className="p-2 text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition"
+              title="Toggle Fullscreen"
             >
               <Maximize className="w-4 h-4" />
             </button>
           </div>
+        </div>
+
+        {/* Centered Emoji Reactions Row (Directly Matching Uploaded Design) */}
+        <div className="flex items-center justify-center gap-2 sm:gap-4 pt-2.5 pb-0.5 border-t border-white/5 select-none">
+          {['🔥', '❤️', '👏', '😂', '🍿', '🎉', '🚀'].map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => onSendReaction?.(emoji)}
+              className="text-2xl sm:text-3xl hover:scale-135 active:scale-90 transition-transform p-1 rounded-xl hover:bg-white/10 touch-manipulation"
+              title={`React ${emoji}`}
+            >
+              {emoji}
+            </button>
+          ))}
         </div>
       </div>
     </div>
