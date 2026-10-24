@@ -1,0 +1,6 @@
+timestamp,iso_time,room_code,message_id,user_id,username,role,message_text
+1792850400000,2026-10-24T14:00:00.000Z,"ROOM01","msg_001","user_host","Iranna","Host","Welcome everyone to our synchronized YouTube screening!"
+1792850415000,2026-10-24T14:00:15.000Z,"ROOM01","msg_002","user_alice","Alice","CoHost","Audio and video sync looks crystal clear!"
+1792850430000,2026-10-24T14:00:30.000Z,"ROOM01","msg_003","user_bob","Bob","Member","Hey Iranna! Loving the dark cinema theme with the Ambilight glow."
+1792850460000,2026-10-24T14:01:00.000Z,"ROOM01","msg_004","user_charlie","Charlie","Member","Can we add Inception trailer next to the playlist?"
+1792850485000,2026-10-24T14:01:25.000Z,"ROOM01","msg_005","user_host","Iranna","Host","Queue updated! Next up is Interstellar 4K trailer."

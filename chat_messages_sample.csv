@@ -1,0 +1,6 @@
+id,room_code,user_id,username,role,text,created_at
+msg_001,ROOM01,user_host,Iranna,Host,Welcome everyone to our synchronized YouTube screening!,2026-10-24 14:00:00
+msg_002,ROOM01,user_alice,Alice,CoHost,Audio and video sync looks crystal clear!,2026-10-24 14:00:15
+msg_003,ROOM01,user_bob,Bob,Member,Hey Iranna! Loving the dark cinema theme with the Ambilight glow.,2026-10-24 14:00:30
+msg_004,ROOM01,user_charlie,Charlie,Member,Can we add Inception trailer next to the playlist?,2026-10-24 14:01:00
+msg_005,ROOM01,user_host,Iranna,Host,Queue updated! Next up is Interstellar 4K trailer.,2026-10-24 14:01:25

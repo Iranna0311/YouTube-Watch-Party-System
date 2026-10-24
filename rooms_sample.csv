@@ -1,0 +1,4 @@
+code,host_id,current_video_id,play_state,current_time,created_at,updated_at
+ROOM01,user_host,M7lc1UVf-VE,playing,42.5,2026-10-24 13:50:00,2026-10-24 14:02:00
+ROOM02,user_alice,dQw4w9WgXcQ,paused,0.0,2026-10-24 14:10:00,2026-10-24 14:10:00
+ROOM03,user_bob,jfKfPfyJRdk,playing,120.0,2026-10-24 14:15:00,2026-10-24 14:18:30

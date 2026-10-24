@@ -1,0 +1,4 @@
+id,room_code,action,performed_by,details,created_at
+log_001,ROOM01,ROOM_CREATED,Iranna,Room ROOM01 initialized with YouTube default stream,2026-10-24 13:50:00
+log_002,ROOM01,ROLE_CHANGED,Iranna,Promoted Alice to CoHost role,2026-10-24 13:55:00
+log_003,ROOM01,VIDEO_SEEK,Iranna,Synchronized playback seek to 42.5s,2026-10-24 14:02:00
