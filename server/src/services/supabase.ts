@@ -12,14 +12,22 @@
  * Gracefully degrades to in-memory if Supabase credentials are not set or unreachable.
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import { ChatMessage, AuditLogEntry } from '../types';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://xowjxmkhpsdyhayjcaax.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_KEY =
+  process.env.SUPABASE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  'sb_publishable_YA5c9oIfG7kDUeKTSCGm-w_yV4xf_kr';
 
 export const supabase: SupabaseClient | null = (SUPABASE_URL && SUPABASE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: false },
+      realtime: {
+        transport: WebSocket as any,
+      },
     })
   : null;
 
