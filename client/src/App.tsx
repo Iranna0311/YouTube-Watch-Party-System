@@ -245,6 +245,7 @@ export const App: React.FC = () => {
     });
 
     socket.on('reaction', (reaction: EmojiReaction) => {
+      if (reaction.userId === userId) return;
       setActiveReactions((prev) => [...prev, reaction]);
       setTimeout(() => {
         setActiveReactions((prev) => prev.filter((r) => r.id !== reaction.id));
@@ -389,6 +390,17 @@ export const App: React.FC = () => {
 
   const handleSendReaction = (emoji: string) => {
     socket.emit('reaction', { emoji });
+    const localReaction: EmojiReaction = {
+      id: 'react_local_' + Math.random().toString(36).substring(2, 9),
+      emoji,
+      userId,
+      username: username || 'You',
+      timestamp: Date.now(),
+    };
+    setActiveReactions((prev) => [...prev, localReaction]);
+    setTimeout(() => {
+      setActiveReactions((prev) => prev.filter((r) => r.id !== localReaction.id));
+    }, 3000);
   };
 
   const handleLeaveRoom = () => {

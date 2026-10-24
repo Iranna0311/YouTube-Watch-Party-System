@@ -55,3 +55,22 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #e50914;
 }
+
+/* Real-time Floating Cinema Emoji Reactions */
+@keyframes cinema-float-up {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  12% {
+    transform: translateY(-30px) scale(1.25);
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(-420px) scale(1.4);
+    opacity: 0;
+  }
+}
