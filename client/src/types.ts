@@ -57,6 +57,8 @@ export interface ChatMessage {
   role: Role;
   text: string;
   timestamp: number;
+  audioUrl?: string;
+  audioDuration?: number;
 }
 
 export interface EmojiReaction {

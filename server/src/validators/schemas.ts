@@ -86,7 +86,11 @@ export const AddToQueueSchema = z.object({
 });
 
 export const ChatMessageSchema = z.object({
-  text: z.string().trim().min(1).max(500),
+  text: z.string().trim().max(500).default(''),
+  audioUrl: z.string().max(2500000).optional(),
+  audioDuration: z.number().max(120).optional(),
+}).refine((data) => data.text.length > 0 || (typeof data.audioUrl === 'string' && data.audioUrl.length > 0), {
+  message: 'Message must contain either text or an audio recording',
 });
 
 export const ReactionSchema = z.object({

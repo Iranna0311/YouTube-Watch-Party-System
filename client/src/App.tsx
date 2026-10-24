@@ -449,9 +449,9 @@ export const App: React.FC = () => {
     showToast(`?? Request to ${action} video sent to VIP Host!`);
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = (text: string, audioUrl?: string, audioDuration?: number) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed && !audioUrl) return;
     if (!socket.connected) {
       showToast('Reconnecting to room server...');
       socket.connect();
@@ -463,11 +463,17 @@ export const App: React.FC = () => {
       userId,
       username: username || 'You',
       role: currentUserRole,
-      text: trimmed,
+      text: trimmed || (audioUrl ? '??? Voice Note' : ''),
       timestamp: Date.now(),
+      audioUrl,
+      audioDuration,
     };
     setChatMessages((prev) => [...prev, optimisticMsg]);
-    socket.emit('chat_message', { text: trimmed });
+    socket.emit('chat_message', {
+      text: trimmed || (audioUrl ? '??? Voice Note' : ''),
+      audioUrl,
+      audioDuration,
+    });
   };
 
   const handleSendReaction = (emoji: string) => {

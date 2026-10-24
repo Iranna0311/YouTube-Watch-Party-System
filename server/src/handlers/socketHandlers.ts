@@ -607,8 +607,10 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
         userId: participant.userId,
         username: participant.username,
         role: participant.role,
-        text: parsed.data.text, // already trimmed by Zod; React escapes on render
+        text: parsed.data.text || (parsed.data.audioUrl ? '??? Voice Note' : ''),
         timestamp: Date.now(),
+        audioUrl: parsed.data.audioUrl,
+        audioDuration: parsed.data.audioDuration,
       };
 
       room.broadcast('chat_message', message);
