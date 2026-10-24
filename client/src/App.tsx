@@ -87,6 +87,15 @@ export const App: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  const roomCodeRef = useRef(roomCode);
+  const usernameRef = useRef(username);
+  const inRoomRef = useRef(inRoom);
+  useEffect(() => {
+    roomCodeRef.current = roomCode;
+    usernameRef.current = username;
+    inRoomRef.current = inRoom;
+  }, [roomCode, username, inRoom]);
+
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -99,6 +108,15 @@ export const App: React.FC = () => {
     socket.on('connect', () => {
       console.log('[Socket Connected]:', socket.id);
       setIsConnected(true);
+      if (inRoomRef.current && roomCodeRef.current) {
+        const token = getSessionToken();
+        socket.emit('join_room', {
+          roomId: roomCodeRef.current,
+          username: usernameRef.current || 'Viewer',
+          userId,
+          sessionToken: token || undefined,
+        });
+      }
     });
     socket.on('disconnect', () => {
       setIsConnected(false);
@@ -246,7 +264,20 @@ export const App: React.FC = () => {
 
     // Chat & Reactions
     socket.on('chat_message', (msg: ChatMessage) => {
-      setChatMessages((prev) => [...prev, msg]);
+      setChatMessages((prev) => {
+        if (msg.userId === userId) {
+          const matchIdx = prev.findIndex(
+            (m) => m.id.startsWith('msg_local_') && m.text === msg.text
+          );
+          if (matchIdx !== -1) {
+            const next = [...prev];
+            next[matchIdx] = msg;
+            return next;
+          }
+        }
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
     });
 
     socket.on('reaction', (reaction: EmojiReaction) => {
@@ -370,7 +401,24 @@ export const App: React.FC = () => {
   };
 
   const handleSendMessage = (text: string) => {
-    socket.emit('chat_message', { text });
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    if (!socket.connected) {
+      showToast('Reconnecting to room server...');
+      socket.connect();
+    }
+
+    const tempId = 'msg_local_' + Math.random().toString(36).substring(2, 9);
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      userId,
+      username: username || 'You',
+      role: currentUserRole,
+      text: trimmed,
+      timestamp: Date.now(),
+    };
+    setChatMessages((prev) => [...prev, optimisticMsg]);
+    socket.emit('chat_message', { text: trimmed });
   };
 
   const handleSendReaction = (emoji: string) => {
@@ -588,7 +636,7 @@ export const App: React.FC = () => {
         </div>
 
         {/* Right Column (1/4): Tabbed Sidebar (Audience, Queue, Live Chat) */}
-        <div className="lg:col-span-1 flex flex-col h-[480px] sm:h-[540px] lg:h-[calc(100vh-6.5rem)]">
+        <div className="lg:col-span-1 flex flex-col h-[520px] sm:h-[580px] lg:h-[calc(100vh-6.5rem)]">
           {/* Cinema Tab Selector */}
           <div className="flex cinema-panel rounded-2xl p-1 mb-3 border border-white/5">
             <button
@@ -642,9 +690,12 @@ export const App: React.FC = () => {
               <PlaylistQueue
                 queue={queue}
                 userRole={currentUserRole}
+                pendingRequests={pendingRequests}
                 onAddToQueue={handleAddToQueue}
                 onAdvanceQueue={handleAdvanceQueue}
                 onRequestSuggestQueue={handleSuggestQueue}
+                onApproveRequest={handleApproveRequest}
+                onRejectRequest={handleRejectRequest}
               />
             )}
 

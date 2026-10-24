@@ -104,22 +104,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
-      <form onSubmit={handleSubmit} className="mt-3 pt-3 border-t border-white/10 flex gap-2">
+      {/* Input Form (Guaranteed sticky at bottom & immune to keyboard crush) */}
+      <form onSubmit={handleSubmit} className="mt-2 pt-2.5 border-t border-white/10 flex items-center gap-2 shrink-0">
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Whisper something to the theater..."
           maxLength={500}
-          className="flex-1 bg-cinema-950/80 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/20 transition"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
+          className="flex-1 bg-cinema-950/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm sm:text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 transition shadow-inner"
         />
         <button
           type="submit"
           disabled={!text.trim()}
-          className="p-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600 text-white rounded-xl transition shadow-md shadow-red-600/20 flex items-center justify-center shrink-0"
+          className="p-2.5 px-3 bg-red-600 hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:hover:bg-red-600 text-white rounded-xl transition shadow-md shadow-red-600/30 flex items-center justify-center shrink-0 cursor-pointer disabled:cursor-not-allowed"
+          title="Send message"
         >
-          <Send className="w-3.5 h-3.5" />
+          <Send className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </button>
       </form>
     </div>
