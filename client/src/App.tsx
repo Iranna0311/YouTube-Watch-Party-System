@@ -143,11 +143,41 @@ export const App: React.FC = () => {
           setCurrentUserRole(me.role);
         }
         setInRoom(true);
+
+        // Notify room when someone joins
+        if (data.userId !== userId) {
+          showToast(`🎬 ${data.username} joined the screening (${data.role})`);
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: 'sys_' + Math.random().toString(36).substring(2, 9),
+              userId: 'system',
+              username: 'System',
+              role: 'Participant',
+              text: `🎬 ${data.username} joined the screening (${data.role})`,
+              timestamp: Date.now(),
+            },
+          ]);
+        }
       }
     );
 
     socket.on('user_left', (data: { userId: string; username: string; participants: ParticipantData[] }) => {
       setParticipants(data.participants);
+      if (data.userId !== userId) {
+        showToast(`👋 ${data.username} left the room`);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: 'sys_' + Math.random().toString(36).substring(2, 9),
+            userId: 'system',
+            username: 'System',
+            role: 'Participant',
+            text: `👋 ${data.username} left the theater`,
+            timestamp: Date.now(),
+          },
+        ]);
+      }
     });
 
     socket.on(
