@@ -38,7 +38,7 @@ import {
   getSessionToken,
   saveSessionToken,
 } from './utils/userId';
-import { extractYouTubeVideoId } from './utils/youtube';
+
 import { Lobby } from './components/Lobby';
 import { YouTubePlayer } from './components/YouTubePlayer';
 import { ParticipantList } from './components/ParticipantList';
@@ -63,7 +63,7 @@ export const App: React.FC = () => {
   // Video & Queue State
   const [videoId, setVideoId] = useState('M7lc1UVf-VE');
   const [syncState, setSyncState] = useState<SyncStatePayload | null>(null);
-  const [newVideoInput, setNewVideoInput] = useState('');
+
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
@@ -327,29 +327,6 @@ export const App: React.FC = () => {
     socket.emit('advance_queue');
   };
 
-  const handleChangeVideoSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newVideoInput.trim()) return;
-
-    const parsedId = extractYouTubeVideoId(newVideoInput);
-    if (!parsedId) {
-      showToast('Invalid YouTube URL or ID format');
-      return;
-    }
-
-    if (currentUserRole === 'Participant') {
-      socket.emit('change_request', {
-        type: 'change_video',
-        payload: { videoId: parsedId },
-      });
-      setNewVideoInput('');
-      return;
-    }
-
-    socket.emit('change_video', { videoId: parsedId });
-    setNewVideoInput('');
-  };
-
   // Queue Handlers
   const handleAddToQueue = (queuedVideoId: string) => {
     socket.emit('add_to_queue', { videoId: queuedVideoId });
@@ -495,26 +472,6 @@ export const App: React.FC = () => {
             {copiedLink ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
             <span>{copiedLink ? 'Copied Link!' : 'Invite Audience'}</span>
           </button>
-        </div>
-
-        {/* Change Video Input Bar */}
-        <div className="flex items-center gap-2 flex-1 max-w-sm sm:max-w-md mx-2 sm:mx-4">
-          <form onSubmit={handleChangeVideoSubmit} className="flex-1 flex gap-1.5">
-            <input
-              type="text"
-              value={newVideoInput}
-              onChange={(e) => setNewVideoInput(e.target.value)}
-              placeholder={canManagePlayback ? 'Load YouTube URL or Video ID...' : 'Suggest a YouTube video to staff...'}
-              className="w-full bg-cinema-900/90 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/40 transition"
-            />
-            <button
-              type="submit"
-              disabled={!newVideoInput.trim()}
-              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-xl text-xs font-bold shrink-0 transition shadow-md shadow-red-600/20"
-            >
-              {canManagePlayback ? 'Screen' : 'Suggest'}
-            </button>
-          </form>
         </div>
 
         {/* Cinema Controls & Role Badges */}
@@ -678,7 +635,6 @@ export const App: React.FC = () => {
                 messages={chatMessages}
                 currentUserId={userId}
                 onSendMessage={handleSendMessage}
-                onSendReaction={handleSendReaction}
               />
             )}
 
