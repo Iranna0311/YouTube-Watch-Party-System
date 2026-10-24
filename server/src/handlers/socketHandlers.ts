@@ -38,7 +38,13 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
       if (!data.roomCode) return null;
       const room = roomManager.getRoom(data.roomCode);
       if (!room) return null;
-      const participant = room.getParticipantBySocket(socket.id);
+      let participant = room.getParticipantBySocket(socket.id);
+      if (!participant && data.userId) {
+        participant = room.getParticipant(data.userId);
+        if (participant) {
+          participant.socketId = socket.id;
+        }
+      }
       return { room, participant };
     };
 

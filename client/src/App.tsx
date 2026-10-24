@@ -71,6 +71,14 @@ export const App: React.FC = () => {
 
   // Active Tab in Sidebar (participants | queue | chat)
   const [sidebarTab, setSidebarTab] = useState<'participants' | 'queue' | 'chat'>('chat');
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const sidebarTabRef = useRef(sidebarTab);
+  useEffect(() => {
+    sidebarTabRef.current = sidebarTab;
+    if (sidebarTab === 'chat') {
+      setUnreadChatCount(0);
+    }
+  }, [sidebarTab]);
 
   // Approval Requests
   const [pendingRequests, setPendingRequests] = useState<ChangeRequest[]>([]);
@@ -291,19 +299,15 @@ export const App: React.FC = () => {
     // Chat & Reactions
     socket.on('chat_message', (msg: ChatMessage) => {
       setChatMessages((prev) => {
-        if (msg.userId === userId) {
-          const matchIdx = prev.findIndex(
-            (m) => m.id.startsWith('msg_local_') && m.text === msg.text
-          );
-          if (matchIdx !== -1) {
-            const next = [...prev];
-            next[matchIdx] = msg;
-            return next;
-          }
-        }
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+        const filtered = prev.filter(
+          (m) => !(m.id?.startsWith('msg_local_') && m.userId === msg.userId && m.text === msg.text)
+        );
+        if (filtered.some((m) => m.id === msg.id)) return filtered;
+        return [...filtered, msg];
       });
+      if (sidebarTabRef.current !== 'chat') {
+        setUnreadChatCount((cnt) => cnt + 1);
+      }
     });
 
     socket.on('reaction', (reaction: EmojiReaction & { clientId?: string }) => {
@@ -686,8 +690,11 @@ export const App: React.FC = () => {
           {/* Cinema Tab Selector */}
           <div className="flex cinema-panel rounded-2xl p-1 mb-3 border border-white/5">
             <button
-              onClick={() => setSidebarTab('chat')}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
+              onClick={() => {
+                setSidebarTab('chat');
+                setUnreadChatCount(0);
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 relative ${
                 sidebarTab === 'chat'
                   ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/20'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -695,6 +702,9 @@ export const App: React.FC = () => {
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Chat</span>
+              {unreadChatCount > 0 && sidebarTab !== 'chat' && (
+                <span className="w-2 h-2 rounded-full bg-red-400 animate-ping absolute top-1.5 right-2" />
+              )}
             </button>
 
             <button
