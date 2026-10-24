@@ -42,6 +42,7 @@ function initCsvFiles() {
       for (const line of actLines) {
         const parts = line.split(',');
         if (parts[0]) recordedKeys.add(parts[0].trim());
+        if (parts[4]) recordedKeys.add(parts[4].replace(/"/g, '').trim());
       }
     }
   } catch (err) {
@@ -133,54 +134,68 @@ export async function logUserLeave(roomCode: string, userId: string, username: s
 }
 
 /**
- * Real-time Cloud Sync:
- * Listens to Supabase for events occurring on Render or Vercel
- * and immediately synchronizes them down into the local CSV files!
+ * Sync all cloud entries (Render & Vercel) from Supabase down into local CSV files
+ */
+async function syncFromCloudSupabase() {
+  if (!supabase) return;
+  try {
+    // Sync audit/activity logs from cloud
+    const { data: audits } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(200);
+
+    if (audits && audits.length > 0) {
+      for (const row of audits) {
+        const key = row.id || `${row.created_at}_${row.room_code}`;
+        if (!recordedKeys.has(key)) {
+          recordedKeys.add(key);
+          const ts = row.created_at ? new Date(row.created_at).getTime() : Date.now();
+          const iso = new Date(ts).toISOString();
+          const csvLine = `${ts},${iso},${escapeCsv(row.room_code || '')},${escapeCsv(row.action || '')},${escapeCsv(row.id || '')},${escapeCsv(row.performed_by || '')},${escapeCsv('CloudUser')},${escapeCsv(row.details || '')}\n`;
+          fs.appendFileSync(ACTIVITY_CSV_PATH, csvLine, 'utf8');
+        }
+      }
+    }
+
+    // Sync chat messages from cloud
+    const { data: chats } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(200);
+
+    if (chats && chats.length > 0) {
+      for (const row of chats) {
+        const msgId = row.id || `msg_${Date.now()}`;
+        if (!recordedKeys.has(msgId)) {
+          recordedKeys.add(msgId);
+          const ts = row.created_at ? new Date(row.created_at).getTime() : Date.now();
+          const iso = new Date(ts).toISOString();
+          const csvLine = `${ts},${iso},${escapeCsv(row.room_code || '')},${escapeCsv(msgId)},${escapeCsv(row.user_id || '')},${escapeCsv(row.username || '')},${escapeCsv(row.role || '')},${escapeCsv(row.text || '')}\n`;
+          fs.appendFileSync(CHAT_CSV_PATH, csvLine, 'utf8');
+        }
+      }
+    }
+  } catch (err) {
+    // Network retry will handle it in next tick
+  }
+}
+
+/**
+ * Start bidirectional cloud sync
  */
 export function startCloudRealtimeSync() {
   if (!supabase) return;
 
-  try {
-    // Sync activity logs (rooms created, joined, left on Render/Vercel)
-    supabase
-      .channel('cloud-activity-sync')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_logs' }, (payload) => {
-        const row = payload.new;
-        if (!row) return;
-        const key = row.id || `${row.created_at}_${row.room_code}`;
-        if (recordedKeys.has(key)) return;
-        recordedKeys.add(key);
+  // Run initial pull immediately
+  syncFromCloudSupabase();
 
-        const ts = row.created_at ? new Date(row.created_at).getTime() : Date.now();
-        const iso = new Date(ts).toISOString();
-        const csvLine = `${ts},${iso},${escapeCsv(row.room_code || '')},${escapeCsv(row.action || '')},${escapeCsv(row.id || '')},${escapeCsv(row.performed_by || '')},${escapeCsv('Participant')},${escapeCsv(row.details || '')}\n`;
+  // Continuously pull every 3 seconds so any Render/Vercel activity appears in local CSV immediately
+  setInterval(syncFromCloudSupabase, 3000);
 
-        fs.appendFile(ACTIVITY_CSV_PATH, csvLine, 'utf8', () => {});
-      })
-      .subscribe();
-
-    // Sync chat messages sent on Render/Vercel
-    supabase
-      .channel('cloud-chat-sync')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
-        const row = payload.new;
-        if (!row) return;
-        const msgId = row.id || `msg_${Date.now()}`;
-        if (recordedKeys.has(msgId)) return;
-        recordedKeys.add(msgId);
-
-        const ts = row.created_at ? new Date(row.created_at).getTime() : Date.now();
-        const iso = new Date(ts).toISOString();
-        const csvLine = `${ts},${iso},${escapeCsv(row.room_code || '')},${escapeCsv(msgId)},${escapeCsv(row.user_id || '')},${escapeCsv(row.username || '')},${escapeCsv(row.role || '')},${escapeCsv(row.text || '')}\n`;
-
-        fs.appendFile(CHAT_CSV_PATH, csvLine, 'utf8', () => {});
-      })
-      .subscribe();
-
-    console.log('[WatchParty Cloud Sync] Active: Real-time sync from Render & Vercel -> Local CSVs');
-  } catch (err) {
-    console.warn('[WatchParty Cloud Sync] Failed to initialize:', err);
-  }
+  console.log('[WatchParty Cloud Sync] Active: Synchronizing Render & Vercel events into local CSV');
 }
 
 export function getChatCsvPath(): string {
