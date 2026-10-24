@@ -75,6 +75,19 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
   // Settings Menu state (Quality & Speed)
   const [showSettings, setShowSettings] = useState(false);
+  const [showScreenControls, setShowScreenControls] = useState(false);
+  const screenControlsTimerRef = useRef<any>(null);
+
+  const handleScreenClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    setShowScreenControls((prev) => !prev);
+    if (screenControlsTimerRef.current) clearTimeout(screenControlsTimerRef.current);
+    screenControlsTimerRef.current = setTimeout(() => {
+      setShowScreenControls(false);
+    }, 3500);
+  };
   const [currentQuality, setCurrentQuality] = useState('auto');
   const [currentSpeed, setCurrentSpeed] = useState(1);
 
@@ -416,6 +429,63 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           <div id="yt-player-target" className="w-full h-full" />
         </div>
 
+        {/* On-Screen Center Video Controls Overlay (Always visible when paused, shows on hover/tap when playing) */}
+        {!needsUserGesture && (
+          <div
+            onClick={handleScreenClick}
+            className={`absolute inset-0 z-20 flex items-center justify-center gap-5 sm:gap-8 transition-all duration-300 pointer-events-auto cursor-pointer ${
+              isPlaying && !showScreenControls
+                ? 'opacity-0 hover:opacity-100 bg-black/30 hover:bg-black/50 backdrop-blur-[1px]'
+                : 'opacity-100 bg-black/50 backdrop-blur-[2px]'
+            }`}
+          >
+            {/* On-Screen -5s Skip */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSeekDelta(-5);
+              }}
+              className="w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/60 hover:bg-black/85 text-white/90 hover:text-white border border-white/15 flex flex-col items-center justify-center transition hover:scale-110 active:scale-90 shadow-2xl cursor-pointer"
+              title="Rewind 5 seconds"
+            >
+              <Rewind className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
+              <span className="text-[9px] font-bold mt-0.5 tracking-tight">-5s</span>
+            </button>
+
+            {/* On-Screen Center Big Play/Pause Action Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTogglePlay();
+              }}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-600/95 hover:bg-red-600 active:scale-95 text-white border-2 border-white/30 flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-[0_0_35px_rgba(229,9,20,0.65)] cursor-pointer"
+              title={isPlaying ? 'Pause video' : 'Play video'}
+            >
+              {isPlaying ? (
+                <Pause className="w-7 h-7 sm:w-9 sm:h-9 fill-current" />
+              ) : (
+                <Play className="w-7 h-7 sm:w-9 sm:h-9 fill-current ml-1" />
+              )}
+            </button>
+
+            {/* On-Screen +5s Skip */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSeekDelta(5);
+              }}
+              className="w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/60 hover:bg-black/85 text-white/90 hover:text-white border border-white/15 flex flex-col items-center justify-center transition hover:scale-110 active:scale-90 shadow-2xl cursor-pointer"
+              title="Fast forward 5 seconds"
+            >
+              <FastForward className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
+              <span className="text-[9px] font-bold mt-0.5 tracking-tight">+5s</span>
+            </button>
+          </div>
+        )}
+
         {/* Mobile Autoplay Unblock Overlay */}
         {needsUserGesture && (
           <div className="absolute inset-0 z-30 bg-black/85 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
@@ -491,22 +561,22 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
             {/* Skip Backward -10s */}
             <button
-              onClick={() => handleSeekDelta(-10)}
+              onClick={() => handleSeekDelta(-5)}
               className="px-2.5 sm:px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl border border-white/10 text-xs font-semibold transition flex items-center gap-1"
-              title="Rewind 10 seconds"
+              title="Rewind 5 seconds"
             >
               <Rewind className="w-3.5 h-3.5" />
-              <span>-10s</span>
+              <span>-5s</span>
             </button>
 
             {/* Skip Forward +10s */}
             <button
-              onClick={() => handleSeekDelta(10)}
+              onClick={() => handleSeekDelta(5)}
               className="px-2.5 sm:px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl border border-white/10 text-xs font-semibold transition flex items-center gap-1"
-              title="Fast forward 10 seconds"
+              title="Fast forward 5 seconds"
             >
               <FastForward className="w-3.5 h-3.5" />
-              <span>+10s</span>
+              <span>+5s</span>
             </button>
 
             {/* ((o)) Live Indicator Badge */}

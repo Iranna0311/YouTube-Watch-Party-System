@@ -234,9 +234,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <MessageSquare className="w-4 h-4 text-red-500" />
           <h3 className="font-bold text-white text-sm">Audience Chat</h3>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10 font-mono">
-          {messages.length} {messages.length === 1 ? 'msg' : 'msgs'}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={startRecording}
+            className="text-[11px] px-2.5 py-1 rounded-full bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 font-semibold flex items-center gap-1 transition shadow-sm cursor-pointer"
+            title="Record Voice Note"
+          >
+            <Mic className="w-3.5 h-3.5 text-red-400 group-hover:text-white animate-pulse" />
+            <span>Voice Note</span>
+          </button>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10 font-mono">
+            {messages.length} {messages.length === 1 ? 'msg' : 'msgs'}
+          </span>
+        </div>
       </div>
 
       {/* Messages Scroll Area */}
@@ -357,14 +368,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               className="flex-1 bg-cinema-950/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm sm:text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 transition shadow-inner"
             />
 
-            {/* Voice Record Button */}
+            {/* Voice Record Button (Prominent & High-Contrast) */}
             <button
               type="button"
               onClick={startRecording}
-              className="p-2.5 text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition flex items-center justify-center shrink-0 cursor-pointer"
-              title="Record Voice Note"
+              className="p-2.5 px-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 rounded-xl transition flex items-center justify-center gap-1 shrink-0 cursor-pointer shadow-sm group"
+              title="Record Voice Note (Tap to speak)"
             >
-              <Mic className="w-4 h-4 text-red-400" />
+              <Mic className="w-4 h-4 text-red-400 group-hover:text-white animate-pulse" />
+              <span className="text-[11px] font-bold text-red-300 group-hover:text-white">Voice</span>
             </button>
 
             {/* Text Send Button */}
