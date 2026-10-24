@@ -7,6 +7,7 @@ interface LobbyProps {
   onJoinRoom: (username: string, roomCode: string) => void;
   onCreateRoom: (username: string, initialVideoId?: string) => void;
   errorMessage?: string;
+  isConnected?: boolean;
 }
 
 const CINEMA_PRESETS = [
@@ -20,6 +21,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onJoinRoom,
   onCreateRoom,
   errorMessage,
+  isConnected = true,
 }) => {
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [username, setUsername] = useState(initialUsername || '');
@@ -103,6 +105,13 @@ export const Lobby: React.FC<LobbyProps> = ({
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-cinema-850 border border-red-500/30 text-[10px] font-mono tracking-widest text-red-300 uppercase flex items-center gap-1.5 shadow">
             <Ticket className="w-3 h-3 text-cinema-gold" />
             <span>ADMIT ALL • DOLBY SYNC</span>
+          </div>
+          {/* Live Server Connection Indicator */}
+          <div className="flex items-center justify-center gap-1.5 mb-4 mt-2 text-[11px] font-medium">
+            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-yellow-400 animate-ping'}`} />
+            <span className={isConnected ? 'text-gray-300' : 'text-yellow-400 font-semibold'}>
+              {isConnected ? 'Server Online • Ready to Watch' : 'Connecting to Server...'}
+            </span>
           </div>
 
           {/* Navigation Tabs */}

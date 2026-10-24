@@ -58,6 +58,7 @@ export const App: React.FC = () => {
   const [currentUserRole, setCurrentUserRole] = useState<Role>('Participant');
   const [username, setUsername] = useState(getSavedUsername());
   const [participants, setParticipants] = useState<ParticipantData[]>([]);
+  const [isConnected, setIsConnected] = useState(socket.connected);
 
   // Video & Queue State
   const [videoId, setVideoId] = useState('M7lc1UVf-VE');
@@ -97,6 +98,10 @@ export const App: React.FC = () => {
 
     socket.on('connect', () => {
       console.log('[Socket Connected]:', socket.id);
+      setIsConnected(true);
+    });
+    socket.on('disconnect', () => {
+      setIsConnected(false);
     });
 
     socket.on(
@@ -293,6 +298,9 @@ export const App: React.FC = () => {
     setUsername(chosenUsername);
     saveUsername(chosenUsername);
     setRoomCode(code);
+    if (!socket.connected) {
+      socket.connect();
+    }
     const existingToken = getSessionToken();
     socket.emit('join_room', {
       roomId: code,
