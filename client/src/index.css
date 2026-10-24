@@ -4,8 +4,41 @@
 
 @layer base {
   body {
-    @apply bg-gray-950 text-gray-100 font-sans antialiased m-0 p-0;
+    @apply bg-cinema-950 text-gray-100 font-sans antialiased m-0 p-0 selection:bg-red-600 selection:text-white;
   }
+}
+
+/* Atmospheric Cinema Spotlight Background */
+.cinema-bg {
+  background: radial-gradient(circle at 50% -20%, rgba(229, 9, 20, 0.18) 0%, rgba(12, 14, 20, 0.95) 45%, #06070a 100%);
+}
+
+.screen-reflection {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 40%);
+}
+
+/* Glassmorphism Cinema Panel */
+.cinema-panel {
+  background: rgba(17, 20, 30, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cinema-panel-glow {
+  background: rgba(17, 20, 30, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(229, 9, 20, 0.25);
+  box-shadow: 0 0 30px -5px rgba(229, 9, 20, 0.15);
+}
+
+/* Neon Text Glow */
+.text-glow-red {
+  text-shadow: 0 0 15px rgba(229, 9, 20, 0.6);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 15px rgba(245, 197, 24, 0.5);
 }
 
 /* Custom modern scrollbars */
@@ -16,9 +49,9 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #23293a;
   border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #e50914;
 }

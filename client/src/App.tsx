@@ -10,6 +10,15 @@ import {
   ListMusic,
   Users,
   MessageSquare,
+  Crown,
+  Shield,
+  Eye,
+  Film,
+  Sparkles,
+  Ticket,
+  Moon,
+  Sun,
+  Clapperboard,
 } from 'lucide-react';
 import { socket } from './services/socket';
 import {
@@ -59,7 +68,7 @@ export const App: React.FC = () => {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   // Active Tab in Sidebar (participants | queue | chat)
-  const [sidebarTab, setSidebarTab] = useState<'participants' | 'queue' | 'chat'>('participants');
+  const [sidebarTab, setSidebarTab] = useState<'participants' | 'queue' | 'chat'>('chat');
 
   // Approval Requests
   const [pendingRequests, setPendingRequests] = useState<ChangeRequest[]>([]);
@@ -68,6 +77,9 @@ export const App: React.FC = () => {
   // Chat & Reactions
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeReactions, setActiveReactions] = useState<EmojiReaction[]>([]);
+
+  // Cinema Mode / Theater Lights toggle
+  const [theaterMode, setTheaterMode] = useState(false);
 
   // Toast / Error
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -384,31 +396,38 @@ export const App: React.FC = () => {
   const canManagePlayback = currentUserRole === 'Host' || currentUserRole === 'Moderator';
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className={`min-h-screen text-white flex flex-col transition-colors duration-700 ${theaterMode ? 'bg-black' : 'cinema-bg'}`}>
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-gray-900 border border-gray-700 text-gray-200 px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-medium animate-in slide-in-from-top-2">
-          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+        <div className="fixed top-5 right-5 z-50 cinema-panel-glow border-red-500/40 text-gray-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-top-2">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Navigation Bar */}
-      <header className="h-14 border-b border-gray-800/80 bg-gray-900/60 backdrop-blur px-4 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 font-bold text-base tracking-tight">
-            <div className="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center">
-              <Tv className="w-4 h-4 text-white" />
+      {/* Top Cinema Marquee Bar */}
+      <header className={`h-16 border-b transition-all duration-500 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 ${
+        theaterMode
+          ? 'border-white/5 bg-black/80 backdrop-blur-md'
+          : 'border-white/10 cinema-panel shadow-md'
+      }`}>
+        {/* Brand & Room Pass */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 font-black text-base tracking-tight">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-red-600 to-red-500 flex items-center justify-center shadow-lg shadow-red-600/30">
+              <Clapperboard className="w-4 h-4 text-white" />
             </div>
-            <span>WatchSync</span>
+            <span className="hidden sm:inline">Watch<span className="text-red-500 text-glow-red">Sync</span></span>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-gray-800/90 border border-gray-700/80 rounded-lg px-2.5 py-1 text-xs">
-            <span className="text-gray-400 font-medium">Room:</span>
-            <span className="font-mono font-bold text-white tracking-wider">{roomCode}</span>
+          {/* Ticket Room Badge */}
+          <div className="flex items-center gap-1.5 bg-cinema-900/90 border border-red-500/30 rounded-xl px-3 py-1.5 text-xs shadow-sm">
+            <Ticket className="w-3.5 h-3.5 text-cinema-gold" />
+            <span className="text-gray-400 text-[11px] font-medium hidden md:inline">PASS:</span>
+            <span className="font-mono font-black text-white tracking-widest text-sm">{roomCode}</span>
             <button
               onClick={copyCode}
-              className="p-1 text-gray-400 hover:text-white transition rounded"
+              className="p-1 text-gray-400 hover:text-white transition rounded ml-0.5"
               title="Copy Room Code"
             >
               {copiedCode ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -417,59 +436,88 @@ export const App: React.FC = () => {
 
           <button
             onClick={copyRoomLink}
-            className="hidden sm:flex items-center gap-1 bg-gray-800/60 hover:bg-gray-800 text-gray-300 hover:text-white px-2.5 py-1 rounded-lg border border-gray-700/60 text-xs transition font-medium"
+            className="hidden md:flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-3 py-1.5 rounded-xl border border-white/10 text-xs transition font-semibold"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedLink ? 'Copied Link!' : 'Invite Link'}</span>
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
+            <span>{copiedLink ? 'Copied Link!' : 'Invite Audience'}</span>
           </button>
         </div>
 
-        {/* Change Video Bar */}
-        <div className="flex items-center gap-2 flex-1 max-w-md mx-4">
+        {/* Change Video Input Bar */}
+        <div className="flex items-center gap-2 flex-1 max-w-sm sm:max-w-md mx-2 sm:mx-4">
           <form onSubmit={handleChangeVideoSubmit} className="flex-1 flex gap-1.5">
             <input
               type="text"
               value={newVideoInput}
               onChange={(e) => setNewVideoInput(e.target.value)}
-              placeholder={canManagePlayback ? 'Paste YouTube URL or ID...' : 'Suggest a YouTube video...'}
-              className="w-full bg-gray-800/90 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+              placeholder={canManagePlayback ? 'Load YouTube URL or Video ID...' : 'Suggest a YouTube video to staff...'}
+              className="w-full bg-cinema-900/90 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/40 transition"
             />
             <button
               type="submit"
               disabled={!newVideoInput.trim()}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-lg text-xs font-semibold shrink-0 transition"
+              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-xl text-xs font-bold shrink-0 transition shadow-md shadow-red-600/20"
             >
-              {canManagePlayback ? 'Load' : 'Suggest'}
+              {canManagePlayback ? 'Screen' : 'Suggest'}
             </button>
           </form>
         </div>
 
-        {/* Audit Log, Role Badge & Exit */}
-        <div className="flex items-center gap-3">
+        {/* Cinema Controls & Role Badges */}
+        <div className="flex items-center gap-2.5">
+          {/* Theater Lights Toggle */}
+          <button
+            onClick={() => setTheaterMode(!theaterMode)}
+            className={`p-2 rounded-xl transition border ${
+              theaterMode
+                ? 'bg-cinema-gold/20 text-cinema-gold border-cinema-gold/40 shadow-sm'
+                : 'bg-white/5 text-gray-400 hover:text-white border-white/10'
+            }`}
+            title={theaterMode ? 'Turn Theater Lights ON' : 'Turn Lights OFF (Theater Mode)'}
+          >
+            {theaterMode ? <Sun className="w-4 h-4 text-cinema-gold" /> : <Moon className="w-4 h-4" />}
+          </button>
+
+          {/* Room Audit Log Modal Button */}
           <button
             onClick={() => setIsAuditModalOpen(true)}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition"
-            title="View Room Audit Log"
+            className="p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition"
+            title="View Screening Audit Log"
           >
             <History className="w-4 h-4" />
           </button>
 
-          <span className="text-xs bg-gray-800 border border-gray-700 text-gray-300 px-2.5 py-1 rounded-lg">
-            Role: <span className="font-bold text-white">{currentUserRole}</span>
-          </span>
+          {/* Role Pill */}
+          {currentUserRole === 'Host' ? (
+            <span className="text-xs bg-amber-500/15 border border-amber-500/40 text-amber-300 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shadow-sm">
+              <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">VIP HOST</span>
+            </span>
+          ) : currentUserRole === 'Moderator' ? (
+            <span className="text-xs bg-blue-500/15 border border-blue-500/40 text-blue-300 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">MODERATOR</span>
+            </span>
+          ) : (
+            <span className="text-xs bg-white/5 border border-white/10 text-gray-300 px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-gray-400" />
+              <span className="hidden sm:inline">AUDIENCE</span>
+            </span>
+          )}
 
+          {/* Exit Room Button */}
           <button
             onClick={handleLeaveRoom}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition"
-            title="Leave Room"
+            className="p-2 text-gray-400 hover:text-red-400 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 rounded-xl transition"
+            title="Exit Theater"
           >
             <LogOut className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-4 gap-4 max-w-7xl mx-auto w-full">
+      {/* Main Theater Stage */}
+      <main className="flex-1 p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-4 gap-4 max-w-7xl mx-auto w-full">
         {/* Left Column (3/4): Video Theater, Change Request Banner, Emoji Controls */}
         <div className="lg:col-span-3 flex flex-col gap-3">
           {canManagePlayback && (
@@ -480,18 +528,25 @@ export const App: React.FC = () => {
             />
           )}
 
-          <YouTubePlayer
-            videoId={videoId}
-            userRole={currentUserRole}
-            onEmitPlay={handleEmitPlay}
-            onEmitPause={handleEmitPause}
-            onEmitSeek={handleEmitSeek}
-            onVideoEnded={handleVideoEnded}
-            syncState={syncState}
-            onRequestControlModal={() => setIsRequestModalOpen(true)}
-          />
+          {/* Cinema Screen Frame with Ambient Ambilight Backglow */}
+          <div className="relative rounded-2xl overflow-hidden shadow-screen border border-white/10 group transition-all duration-500">
+            {/* Ambilight glow aura */}
+            <div className="absolute -inset-2 bg-gradient-to-r from-red-600/30 via-red-500/20 to-cinema-gold/25 rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition duration-1000 -z-10 animate-cinema-glow" />
 
-          <div className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-3 shadow-md">
+            <YouTubePlayer
+              videoId={videoId}
+              userRole={currentUserRole}
+              onEmitPlay={handleEmitPlay}
+              onEmitPause={handleEmitPause}
+              onEmitSeek={handleEmitSeek}
+              onVideoEnded={handleVideoEnded}
+              syncState={syncState}
+              onRequestControlModal={() => setIsRequestModalOpen(true)}
+            />
+          </div>
+
+          {/* Cinema Ambient Action Bar */}
+          <div className="flex items-center justify-between cinema-panel rounded-2xl p-3 px-4 shadow-md border border-white/5">
             <div className="flex items-center gap-3">
               <EmojiReactions
                 onSendReaction={handleSendReaction}
@@ -501,43 +556,45 @@ export const App: React.FC = () => {
               {!canManagePlayback && (
                 <button
                   onClick={() => setIsRequestModalOpen(true)}
-                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg border border-gray-700 text-xs font-medium transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-red-600/15 hover:bg-red-600/25 text-red-300 rounded-xl border border-red-500/30 text-xs font-semibold transition flex items-center gap-1.5"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Request Control / Suggestion</span>
+                  <Send className="w-3.5 h-3.5 text-red-400" />
+                  <span>Request Control / Song Suggestion</span>
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            {/* Synced Indicator */}
+            <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-              <span>Synced with Server</span>
+              <span className="text-gray-300 hidden sm:inline">DOLBY FRAME SYNC</span>
+              <span className="text-gray-300 sm:hidden">SYNCED</span>
             </div>
           </div>
         </div>
 
-        {/* Right Column (1/4): Tabbed Sidebar (Participants, Playlist Queue, Chat) */}
-        <div className="lg:col-span-1 flex flex-col h-[calc(100vh-6rem)]">
-          {/* Sidebar Tab Selector */}
-          <div className="flex bg-gray-900 border border-gray-800 rounded-xl p-1 mb-3">
+        {/* Right Column (1/4): Tabbed Sidebar (Audience, Queue, Live Chat) */}
+        <div className="lg:col-span-1 flex flex-col h-[calc(100vh-6.5rem)]">
+          {/* Cinema Tab Selector */}
+          <div className="flex cinema-panel rounded-2xl p-1 mb-3 border border-white/5">
             <button
-              onClick={() => setSidebarTab('participants')}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1 ${
-                sidebarTab === 'participants'
-                  ? 'bg-red-600 text-white shadow'
-                  : 'text-gray-400 hover:text-white'
+              onClick={() => setSidebarTab('chat')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
+                sidebarTab === 'chat'
+                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Users className="w-3.5 h-3.5" />
-              <span>Users ({participants.length})</span>
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Chat</span>
             </button>
 
             <button
               onClick={() => setSidebarTab('queue')}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1 ${
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
                 sidebarTab === 'queue'
-                  ? 'bg-red-600 text-white shadow'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <ListMusic className="w-3.5 h-3.5" />
@@ -545,27 +602,25 @@ export const App: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setSidebarTab('chat')}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1 ${
-                sidebarTab === 'chat'
-                  ? 'bg-red-600 text-white shadow'
-                  : 'text-gray-400 hover:text-white'
+              onClick={() => setSidebarTab('participants')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
+                sidebarTab === 'participants'
+                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Chat</span>
+              <Users className="w-3.5 h-3.5" />
+              <span>Cast ({participants.length})</span>
             </button>
           </div>
 
-          <div className="flex-1 min-h-0">
-            {sidebarTab === 'participants' && (
-              <ParticipantList
-                participants={participants}
+          {/* Active Sidebar Tab Panel */}
+          <div className="flex-1 min-h-0 cinema-panel rounded-2xl p-1 border border-white/5 overflow-hidden">
+            {sidebarTab === 'chat' && (
+              <ChatPanel
+                messages={chatMessages}
                 currentUserId={userId}
-                currentUserRole={currentUserRole}
-                onAssignRole={handleAssignRole}
-                onRemoveParticipant={handleRemoveParticipant}
-                onTransferHost={handleTransferHost}
+                onSendMessage={handleSendMessage}
               />
             )}
 
@@ -579,11 +634,14 @@ export const App: React.FC = () => {
               />
             )}
 
-            {sidebarTab === 'chat' && (
-              <ChatPanel
-                messages={chatMessages}
+            {sidebarTab === 'participants' && (
+              <ParticipantList
+                participants={participants}
                 currentUserId={userId}
-                onSendMessage={handleSendMessage}
+                currentUserRole={currentUserRole}
+                onAssignRole={handleAssignRole}
+                onRemoveParticipant={handleRemoveParticipant}
+                onTransferHost={handleTransferHost}
               />
             )}
           </div>
