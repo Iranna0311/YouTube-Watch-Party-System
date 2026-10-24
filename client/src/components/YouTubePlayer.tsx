@@ -110,12 +110,22 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       if (!window.YT || !window.YT.Player) return;
 
       if (playerRef.current) {
+        if (typeof playerRef.current.loadVideoById === 'function') {
+          playerRef.current.loadVideoById(videoId);
+          return;
+        }
         try {
           playerRef.current.destroy();
         } catch {}
       }
 
-      const target = document.getElementById('yt-player-target');
+      let target = document.getElementById('yt-player-target');
+      if (!target && containerRef.current) {
+        target = document.createElement('div');
+        target.id = 'yt-player-target';
+        target.className = 'w-full h-full';
+        containerRef.current.appendChild(target);
+      }
       if (!target) return;
 
       playerRef.current = new window.YT.Player('yt-player-target', {
@@ -128,7 +138,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           modestbranding: 1,
           rel: 0,
           enablejsapi: 1,
-          origin: window.location.origin,
+          playsinline: 1,
         },
         events: {
           onReady: (event: any) => {
@@ -241,17 +251,34 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       }
 
       if (sync.playState === 'playing') {
-        const playPromise = player.playVideo();
-        setIsPlaying(true);
-        if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(() => {
-            setNeedsUserGesture(true);
-            isRemoteUpdateRef.current = true;
-          });
+        try {
+          player.playVideo();
+          setIsPlaying(true);
+        } catch (e) {
+          console.warn('[YouTubePlayer] play error:', e);
         }
+
+        // Modern browser autoplay policy fallback:
+        // If unmuted playback is blocked by Chrome/Safari/mobile, auto-mute and continue playing in sync!
+        setTimeout(() => {
+          try {
+            const state = player.getPlayerState();
+            if (state !== 1 && state !== 3) {
+              player.mute();
+              setIsMuted(true);
+              player.playVideo();
+              setNeedsUserGesture(true);
+            } else {
+              setNeedsUserGesture(false);
+            }
+          } catch {}
+        }, 400);
       } else {
-        player.pauseVideo();
-        setIsPlaying(false);
+        try {
+          player.pauseVideo();
+          setIsPlaying(false);
+          setNeedsUserGesture(false);
+        } catch {}
       }
     },
     []

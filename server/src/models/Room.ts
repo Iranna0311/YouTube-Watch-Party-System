@@ -289,6 +289,7 @@ export class Room {
 
   /** Emit an event only to Host and Moderators in this room. */
   public broadcastToStaff(event: string, payload: any): void {
+    this.io.to(`${this.code}:staff`).emit(event, payload);
     this.participants.forEach((p) => {
       if (p.role === 'Host' || p.role === 'Moderator') {
         this.io.to(p.socketId).emit(event, payload);

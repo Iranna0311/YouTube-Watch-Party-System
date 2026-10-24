@@ -77,6 +77,7 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
       data.roomCode = room.code;
       data.userId = userId;
       socket.join(room.code);
+      socket.join(`${room.code}:staff`);
 
       // sessionToken sent ONLY to this socket, never broadcast
       socket.emit('room_created', {
@@ -139,6 +140,9 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
         }
 
         socket.join(room.code);
+        if (existing.role === 'Host' || existing.role === 'Moderator') {
+          socket.join(`${room.code}:staff`);
+        }
 
         // Send token only to its owner
         socket.emit('session_authenticated', {

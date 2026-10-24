@@ -157,6 +157,27 @@ export const App: React.FC = () => {
       }
     });
 
+    socket.on('play', (data: { currentTime?: number; userId?: string }) => {
+      setSyncState((prev) => {
+        const time = typeof data?.currentTime === 'number' ? data.currentTime : (prev?.currentTime ?? 0);
+        return prev ? { ...prev, playState: 'playing', currentTime: time, serverTime: Date.now(), updatedAt: Date.now() } : { videoId, currentTime: time, playState: 'playing', serverTime: Date.now(), updatedAt: Date.now() };
+      });
+    });
+
+    socket.on('pause', (data: { currentTime?: number; userId?: string }) => {
+      setSyncState((prev) => {
+        const time = typeof data?.currentTime === 'number' ? data.currentTime : (prev?.currentTime ?? 0);
+        return prev ? { ...prev, playState: 'paused', currentTime: time, serverTime: Date.now(), updatedAt: Date.now() } : { videoId, currentTime: time, playState: 'paused', serverTime: Date.now(), updatedAt: Date.now() };
+      });
+    });
+
+    socket.on('seek', (data: { time: number; userId?: string }) => {
+      setSyncState((prev) => {
+        const time = typeof data?.time === 'number' ? data.time : (prev?.currentTime ?? 0);
+        return prev ? { ...prev, currentTime: time, serverTime: Date.now(), updatedAt: Date.now() } : { videoId, currentTime: time, playState: 'paused', serverTime: Date.now(), updatedAt: Date.now() };
+      });
+    });
+
     socket.on(
       'user_joined',
       (data: { userId: string; username: string; role: Role; participants: ParticipantData[] }) => {
@@ -246,11 +267,15 @@ export const App: React.FC = () => {
 
     // Approval Request Events
     socket.on('change_request_received', (req: ChangeRequest) => {
-      setPendingRequests((prev) => [...prev, req]);
+      setPendingRequests((prev) => {
+        if (prev.some((r) => r.requestId === req.requestId)) return prev;
+        return [...prev, req];
+      });
+      showToast(`?? Audience Action: ${req.username} requested ${req.type.replace('_', ' ').toUpperCase()}!`);
     });
 
     socket.on('change_request_submitted', () => {
-      showToast('Your request was submitted for approval.');
+      showToast('?? Your request was delivered to the VIP Host for approval!');
     });
 
     socket.on('change_request_resolved', (data: { requestId: string; status: string; approvedBy?: string }) => {
@@ -297,6 +322,9 @@ export const App: React.FC = () => {
       socket.off('room_created');
       socket.off('session_authenticated');
       socket.off('sync_state');
+      socket.off('play');
+      socket.off('pause');
+      socket.off('seek');
       socket.off('user_joined');
       socket.off('user_left');
       socket.off('role_assigned');
@@ -408,9 +436,9 @@ export const App: React.FC = () => {
     }
     socket.emit('change_request', {
       type: action,
-      payload: {},
+      payload: { time: syncState?.currentTime || 0 },
     });
-    showToast(`Request to ${action} video sent to VIP Host!`);
+    showToast(`?? Request to ${action} video sent to VIP Host!`);
   };
 
   const handleSendMessage = (text: string) => {
