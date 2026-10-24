@@ -538,6 +538,14 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager) {
           room.updateVideoState({ currentTime: seekParsed.data.time });
           room.broadcast('seek', { time: seekParsed.data.time, userId: request.userId });
         }
+      } else if (request.type === 'play') {
+        const time = typeof request.payload?.time === 'number' ? request.payload.time : room.getSyncPayload().currentTime;
+        room.updateVideoState({ playState: 'playing', currentTime: time });
+        room.broadcast('play', { time, userId: request.userId });
+      } else if (request.type === 'pause') {
+        const time = typeof request.payload?.time === 'number' ? request.payload.time : room.getSyncPayload().currentTime;
+        room.updateVideoState({ playState: 'paused', currentTime: time });
+        room.broadcast('pause', { time, userId: request.userId });
       }
 
       room.broadcast('sync_state', room.getSyncPayload());

@@ -13,6 +13,7 @@ import {
   FastForward,
   Rewind,
   Check,
+  Send,
 } from 'lucide-react';
 import { Role, SyncStatePayload } from '../types';
 import { formatTime } from '../utils/youtube';
@@ -34,6 +35,7 @@ interface YouTubePlayerProps {
   onVideoEnded?: () => void;
   syncState: SyncStatePayload | null;
   onRequestControlModal?: () => void;
+  onRequestAction?: (action: 'play' | 'pause' | 'change_video') => void;
   onSendReaction?: (emoji: string) => void;
 }
 
@@ -57,6 +59,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   onVideoEnded,
   syncState,
   onRequestControlModal,
+  onRequestAction,
   onSendReaction,
 }) => {
   const playerRef = useRef<any>(null);
@@ -429,16 +432,31 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Left Controls Cluster */}
           <div className="flex items-center gap-2">
-            {/* Play/Pause Button */}
-            <button
-              onClick={handleTogglePlay}
-              className={`p-2 text-white hover:text-red-500 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition ${
-                !canControl ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
-              title={canControl ? (isPlaying ? 'Pause' : 'Play') : 'Host control only'}
-            >
-              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-            </button>
+            {/* Host: Play/Pause. Guest/Friend: Request Play / Request Pause */}
+            {canControl ? (
+              <button
+                onClick={handleTogglePlay}
+                className="p-2 text-white hover:text-red-500 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition cursor-pointer"
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (onRequestAction) {
+                    onRequestAction(isPlaying ? 'pause' : 'play');
+                  } else if (onRequestControlModal) {
+                    onRequestControlModal();
+                  }
+                }}
+                className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-red-600/30 active:scale-95 cursor-pointer"
+                title={isPlaying ? 'Request VIP Host to pause video' : 'Request VIP Host to play video'}
+              >
+                <Send className="w-3.5 h-3.5 -rotate-12" />
+                <span>{isPlaying ? 'Request Pause' : 'Request Play'}</span>
+              </button>
+            )}
 
             {/* Skip Backward -10s */}
             <button

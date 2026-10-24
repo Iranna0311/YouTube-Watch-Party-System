@@ -396,8 +396,21 @@ export const App: React.FC = () => {
     socket.emit('reject_request', { requestId });
   };
 
-  const handleSubmitParticipantRequest = (type: 'change_video' | 'seek', payload: any) => {
+  const handleSubmitParticipantRequest = (type: 'change_video' | 'seek' | 'play' | 'pause', payload: any) => {
     socket.emit('change_request', { type, payload });
+    showToast(`Request to ${type.replace('_', ' ')} sent to VIP Host!`);
+  };
+
+  const handleRequestAction = (action: 'play' | 'pause' | 'change_video') => {
+    if (action === 'change_video') {
+      setIsRequestModalOpen(true);
+      return;
+    }
+    socket.emit('change_request', {
+      type: action,
+      payload: {},
+    });
+    showToast(`Request to ${action} video sent to VIP Host!`);
   };
 
   const handleSendMessage = (text: string) => {
@@ -601,6 +614,7 @@ export const App: React.FC = () => {
               onVideoEnded={handleVideoEnded}
               syncState={syncState}
               onRequestControlModal={() => setIsRequestModalOpen(true)}
+              onRequestAction={handleRequestAction}
               onSendReaction={handleSendReaction}
             />
           </div>
