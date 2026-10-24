@@ -7,7 +7,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { RoomManager } from './models/RoomManager';
 import { registerSocketHandlers } from './handlers/socketHandlers';
-import { getChatCsvPath, getActivityCsvPath } from './services/liveLogger';
+import { getChatCsvPath, getActivityCsvPath, startCloudRealtimeSync } from './services/liveLogger';
 
 dotenv.config();
 
@@ -119,6 +119,7 @@ registerSocketHandlers(io, roomManager);
 
 export function startServer(port: number | string = PORT) {
   if (server.listening) return server;
+  startCloudRealtimeSync();
   return server.listen(port, () => {
     console.log(`[WatchParty Server] Running on http://localhost:${port}`);
     console.log(`[WatchParty Server] CORS allowed origin: ${CLIENT_ORIGIN}`);
