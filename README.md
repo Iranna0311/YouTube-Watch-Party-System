@@ -10,7 +10,7 @@ A production-ready, synchronized YouTube Watch Party system built with **Node.js
 ---
 
 ## 🚀 Live Demo & Links
-- **Live Application:** https://youtube-watch-party-iranna.onrender.com *(Deploying to Render — URL will be live within ~5 minutes of first push)*
+- **Live Application:** https://youtube-watch-party-system-udjv.onrender.com
 - **Repository:** https://github.com/Iranna0311/YouTube-Watch-Party-System
 
 ---
