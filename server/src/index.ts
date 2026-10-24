@@ -105,14 +105,21 @@ app.get('/api/export/activity.csv', (_req, res) => {
   return res.status(404).send('No activity data recorded yet.');
 });
 
-// Serve frontend build if dist folder exists (Full-stack Render deployment support)
-const clientDistPath = path.resolve(__dirname, '../../client/dist');
-if (fs.existsSync(clientDistPath)) {
-  app.use(express.static(clientDistPath));
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+// Dedicated Backend Root Endpoint (Render is strictly the API & WebSocket server)
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    service: 'YouTube Watch Party WebSocket Backend',
+    status: 'online',
+    architecture: 'Separated: Backend on Render + Frontend on Vercel',
+    frontendUrl: 'https://you-tube-watch-party-system-16zu717mu-iranna1.vercel.app',
+    endpoints: {
+      health: '/health',
+      chatHistoryCsv: '/api/export/chat.csv',
+      activityLogsCsv: '/api/export/activity.csv',
+      roomLookup: '/api/room/:code'
+    }
   });
-}
+});
 
 // Register real-time Socket.IO event handlers
 registerSocketHandlers(io, roomManager);
