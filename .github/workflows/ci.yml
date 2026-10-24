@@ -18,14 +18,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm run install:all
+        run: |
+          npm --prefix server install
+          npm --prefix client install
 
       - name: Run Server Unit & Integration Tests (Vitest)
-        run: npm test
+        run: npm test --prefix server
 
       - name: Compile and Build (Client & Server)
-        run: npm run build
-
+        run: |
+          npm run build --prefix client
+          npm run build --prefix server
