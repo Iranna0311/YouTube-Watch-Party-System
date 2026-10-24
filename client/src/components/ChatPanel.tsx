@@ -58,7 +58,7 @@ const VoiceMessageBubble: React.FC<{ audioUrl: string; duration?: number; isSelf
       <button
         type="button"
         onClick={togglePlay}
-        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition active:scale-95 shadow-md ${
+        className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition active:scale-95 shadow-lg ${
           isSelf ? 'bg-white text-red-600 hover:bg-gray-100' : 'bg-red-600 text-white hover:bg-red-500'
         }`}
         title={isPlaying ? 'Pause audio' : 'Play voice note'}
@@ -232,7 +232,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-red-500" />
-          <h3 className="font-bold text-white text-sm">Audience Chat</h3>
+          <h3 className="font-extrabold text-white text-base tracking-wide">Audience Chat</h3>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -289,7 +289,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   </span>
                 </div>
                 <div
-                  className={`p-2.5 px-3 rounded-2xl max-w-[85%] break-words leading-relaxed text-xs shadow-md ${
+                  className={`p-3.5 px-4 rounded-2xl max-w-[85%] break-words leading-relaxed text-sm shadow-md ${
                     isSelf
                       ? 'bg-gradient-to-r from-red-600 to-red-700 text-white rounded-br-none'
                       : 'bg-cinema-800 text-gray-200 border border-white/10 rounded-bl-none'
@@ -365,28 +365,29 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               autoComplete="off"
               autoCorrect="off"
               spellCheck="false"
-              className="flex-1 bg-cinema-950/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm sm:text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 transition shadow-inner"
+              className="flex-1 min-w-0 bg-cinema-950/90 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/40 transition shadow-inner"
             />
 
-            {/* Voice Record Button (Prominent & High-Contrast) */}
+            {/* Voice Record Button (Prominent, High-Contrast & Spacious) */}
             <button
               type="button"
               onClick={startRecording}
-              className="p-2.5 px-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 rounded-xl transition flex items-center justify-center gap-1 shrink-0 cursor-pointer shadow-sm group"
+              className="px-3.5 py-3 bg-red-600/25 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/50 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-md group active:scale-95"
               title="Record Voice Note (Tap to speak)"
             >
               <Mic className="w-4 h-4 text-red-400 group-hover:text-white animate-pulse" />
-              <span className="text-[11px] font-bold text-red-300 group-hover:text-white">Voice</span>
+              <span className="text-xs font-extrabold text-red-200 group-hover:text-white">Voice</span>
             </button>
 
             {/* Text Send Button */}
             <button
               type="submit"
               disabled={!text.trim()}
-              className="p-2.5 px-3 bg-red-600 hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:hover:bg-red-600 text-white rounded-xl transition shadow-md shadow-red-600/30 flex items-center justify-center shrink-0 cursor-pointer disabled:cursor-not-allowed"
+              className="px-4 py-3 bg-red-600 hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:hover:bg-red-600 text-white rounded-xl transition shadow-md shadow-red-600/40 flex items-center justify-center gap-1 shrink-0 cursor-pointer disabled:cursor-not-allowed"
               title="Send message"
             >
-              <Send className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              <Send className="w-4 h-4" />
+              <span className="text-xs font-bold hidden sm:inline">Send</span>
             </button>
           </form>
         )}

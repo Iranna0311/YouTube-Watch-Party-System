@@ -631,9 +631,9 @@ export const App: React.FC = () => {
       </header>
 
       {/* Main Theater Stage */}
-      <main className="flex-1 p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-4 gap-4 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-[1720px] mx-auto w-full">
         {/* Left Column (3/4): Video Theater, Change Request Banner, Emoji Controls */}
-        <div className="lg:col-span-3 flex flex-col gap-3">
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3.5">
           {canManagePlayback && (
             <ChangeRequestBanner
               requests={pendingRequests}
@@ -692,7 +692,7 @@ export const App: React.FC = () => {
         </div>
 
         {/* Right Column (1/4): Tabbed Sidebar (Audience, Queue, Live Chat) */}
-        <div className="lg:col-span-1 flex flex-col h-[520px] sm:h-[580px] lg:h-[calc(100vh-6.5rem)]">
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-[560px] sm:h-[620px] lg:h-[calc(100vh-6.5rem)]">
           {/* Cinema Tab Selector */}
           <div className="flex cinema-panel rounded-2xl p-1 mb-3 border border-white/5">
             <button
