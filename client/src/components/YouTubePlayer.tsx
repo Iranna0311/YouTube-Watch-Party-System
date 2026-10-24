@@ -124,20 +124,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
               return;
             }
 
-            // Local user interacted directly with video
-            if (canControl) {
-              if (playerState === window.YT.PlayerState.PLAYING) {
-                setIsPlaying(true);
-                onEmitPlay(event.target.getCurrentTime());
-              } else if (playerState === window.YT.PlayerState.PAUSED) {
-                setIsPlaying(false);
-                onEmitPause(event.target.getCurrentTime());
-              }
-            } else {
-              // Participant attempted to control: revert to authoritative state
-              if (syncState) {
-                applySyncState(syncState, event.target);
-              }
+            // Sync local UI state with player (do NOT emit play/pause to server on passive state changes)
+            if (playerState === window.YT.PlayerState.PLAYING) {
+              setIsPlaying(true);
+            } else if (playerState === window.YT.PlayerState.PAUSED) {
+              setIsPlaying(false);
             }
           },
           onError: (err: any) => {

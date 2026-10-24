@@ -595,9 +595,9 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* Cinema Ambient Action Bar */}
-          <div className="flex items-center justify-between cinema-panel rounded-2xl p-3 px-4 shadow-md border border-white/5">
-            <div className="flex items-center gap-3">
+          {/* Cinema Ambient Action Bar (Responsive Mobile & Desktop) */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 cinema-panel rounded-2xl p-2.5 sm:p-3 px-3 sm:px-4 shadow-md border border-white/5">
+            <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
               <EmojiReactions
                 onSendReaction={handleSendReaction}
                 activeReactions={activeReactions}
@@ -606,25 +606,25 @@ export const App: React.FC = () => {
               {!canManagePlayback && (
                 <button
                   onClick={() => setIsRequestModalOpen(true)}
-                  className="px-3 py-1.5 bg-red-600/15 hover:bg-red-600/25 text-red-300 rounded-xl border border-red-500/30 text-xs font-semibold transition flex items-center gap-1.5"
+                  className="px-2.5 sm:px-3 py-1.5 bg-red-600/15 hover:bg-red-600/25 text-red-300 rounded-xl border border-red-500/30 text-[11px] sm:text-xs font-semibold transition flex items-center gap-1.5 shrink-0"
                 >
                   <Send className="w-3.5 h-3.5 text-red-400" />
-                  <span>Request Control / Song Suggestion</span>
+                  <span className="hidden sm:inline">Request Song / Control</span>
+                  <span className="sm:hidden">Request</span>
                 </button>
               )}
             </div>
 
             {/* Synced Indicator */}
-            <div className="flex items-center gap-2 text-[11px] font-medium text-gray-400">
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2 text-[11px] font-medium text-gray-400">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-              <span className="text-gray-300 hidden sm:inline">DOLBY FRAME SYNC</span>
-              <span className="text-gray-300 sm:hidden">SYNCED</span>
+              <span className="text-gray-300">DOLBY SYNCED</span>
             </div>
           </div>
         </div>
 
         {/* Right Column (1/4): Tabbed Sidebar (Audience, Queue, Live Chat) */}
-        <div className="lg:col-span-1 flex flex-col h-[calc(100vh-6.5rem)]">
+        <div className="lg:col-span-1 flex flex-col h-[480px] sm:h-[540px] lg:h-[calc(100vh-6.5rem)]">
           {/* Cinema Tab Selector */}
           <div className="flex cinema-panel rounded-2xl p-1 mb-3 border border-white/5">
             <button
@@ -671,6 +671,7 @@ export const App: React.FC = () => {
                 messages={chatMessages}
                 currentUserId={userId}
                 onSendMessage={handleSendMessage}
+                onSendReaction={handleSendReaction}
               />
             )}
 

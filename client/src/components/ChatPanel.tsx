@@ -6,12 +6,14 @@ interface ChatPanelProps {
   messages: ChatMessage[];
   currentUserId: string;
   onSendMessage: (text: string) => void;
+  onSendReaction?: (emoji: string) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   currentUserId,
   onSendMessage,
+  onSendReaction,
 }) => {
   const [text, setText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -104,8 +106,28 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick Reaction Bar */}
+      {onSendReaction && (
+        <div className="flex items-center justify-between px-1 pt-2 pb-1 border-t border-white/5 select-none">
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">React:</span>
+          <div className="flex items-center gap-1">
+            {['❤️', '🔥', '😂', '👏', '🍿', '🚀'].map((em) => (
+              <button
+                key={em}
+                type="button"
+                onClick={() => onSendReaction(em)}
+                className="w-8 h-8 flex items-center justify-center text-lg hover:scale-130 active:scale-90 transition-transform rounded-lg hover:bg-white/10"
+                title={`React ${em}`}
+              >
+                {em}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="mt-3 pt-3 border-t border-white/10 flex gap-2">
+      <form onSubmit={handleSubmit} className="mt-1 flex gap-2">
         <input
           type="text"
           value={text}
